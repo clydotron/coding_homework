@@ -21,19 +21,35 @@ Server can be shutdown either by hitting ctrl-c in the terminal window, or sendi
 
 ## Requests:
 #### hash
-  `POST /hash` 
-  
   `curl --data "password=secret" http://localhost:8080/hash`
   
   
-  Code | Message | Description
-  StatusOK|Hash ID|ID of the new hash.
+  Code | Text | Message | Description
+  --- | --- | --- | ---
+  200|StatusOK|Hash ID|ID of the new hash: the nth request will return n.
+  400|StatusBadRequest|Only POST accepted.|Non POST request received.
+  412|StatusPreconditionFailed|required key password missing|Required value 'password' not present.
+  500|StatusInternalServerError|ParseForm failed|Unable to parse the form data: bad format or empty.
   
- #### hash/id
-  `GET /hash/:id`
+ #### hash/id  
+  `curl http://localhost:8080/hash/id`
+  
+    Code | Text | Message | Description
+  --- | --- | --- | ---
+  200|StatusOK|Hash|Base64 encoded Sha512 hash of user supplied 'password'
+  400|StatusBadRequest|Only GET accepted.|Non GET request received.
+   ||Must provide valid id|id missing or invalid.
+   ||ID must be a number|id not a number
+   404|StatusNotFound|Not found|Hashed value not found
   
  #### stats
-  `GET /stats`
+  `curl http://localhost:8080/stats`
+  
+  returns json object with two fields:
+  * total: total number of calls to POST /hash
+  * average: average time, in microseconds, or each call
   
  #### shutdown
-  `GET /shutdown`
+  `curl http://localhost:8080/shutdown`
+  
+  Gracefully shutdown the server
