@@ -34,7 +34,8 @@ Server can be shutdown either by hitting ctrl-c in the terminal window, or sendi
  #### hash/id  
   `curl http://localhost:8080/hash/id`
   
-    Code | Text | Message | Description
+  
+  Code | Text | Message | Description
   --- | --- | --- | ---
   200|StatusOK|Hash|Base64 encoded Sha512 hash of user supplied 'password'
   400|StatusBadRequest|Only GET accepted.|Non GET request received.
