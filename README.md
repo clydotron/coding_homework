@@ -17,7 +17,7 @@ additional flags:
 `go run . --port 4000 --delay 3` 
 Listens on port 4000, 3 second delay between the POST hash request and the hash being available via GET
 
-Server can be shutdown either by hitting ctrl-c in the terminal window, or sending a GET request to /shutdown
+Server can be shutdown either by via ctrl-c from inside the terminal window, or sending a GET request to /shutdown
 
 ## Requests:
 #### hash
