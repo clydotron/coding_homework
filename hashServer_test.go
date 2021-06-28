@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -24,7 +26,7 @@ import (
 */
 func TestHashGetRequest_BadRequest(t *testing.T) {
 
-	app := NewHashServer(2 * time.Second)
+	app := NewHashServer(2*time.Second, context.Background())
 
 	req, err := http.NewRequest("GET", "/hash", nil)
 	if err != nil {
@@ -43,7 +45,7 @@ func TestHashGetRequest_BadRequest(t *testing.T) {
 }
 
 func TestHashNoParameters(t *testing.T) {
-	app := NewHashServer(2 * time.Second)
+	app := NewHashServer(2*time.Second, context.Background())
 
 	req, err := http.NewRequest("POST", "/hash", nil)
 	if err != nil {
@@ -61,7 +63,7 @@ func TestHashNoParameters(t *testing.T) {
 }
 
 func TestHashNoPassword(t *testing.T) {
-	app := NewHashServer(2 * time.Second)
+	app := NewHashServer(2*time.Second, context.Background())
 
 	req, err := http.NewRequest("POST", "/hash", strings.NewReader("wrong=value"))
 	if err != nil {
@@ -82,7 +84,7 @@ func TestHashNoPassword(t *testing.T) {
 
 func TestHashPostRequest(t *testing.T) {
 
-	app := NewHashServer(2 * time.Second)
+	app := NewHashServer(2*time.Second, context.Background())
 	app.hashCount = 10
 
 	req, err := http.NewRequest("POST", "/hash", strings.NewReader("password=boogabooga"))
@@ -141,39 +143,70 @@ func postToHash(app *HashServer, payload string, t *testing.T) int {
 		requesting a valid hash ID after the delay returns StatusOK and the hash.
 
 */
-func TestGetHashTooEarly(t *testing.T) {
-	app := NewHashServer(2 * time.Second)
-	app.hashCount = 10
 
-	postToHash(app, "password=secret!", t)
+func TestGetHashNoID(t *testing.T) {
+	app := NewHashServer(2*time.Second, context.Background())
 
-	{
-		req, err := http.NewRequest("GET", "/hash/11", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(app.GetHash)
-
-		handler.ServeHTTP(rr, req)
-
-		// validate the return: -- should be notFound?
-
-		if rr.Code != http.StatusNotFound {
-			t.Errorf("Was expecting http.StatusNotFound, received: %v", rr.Code)
-		}
+	req, err := http.NewRequest("GET", "/hash/", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(app.GetHash)
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Was expecting http.StatusBadRequest, received: %v", rr.Code)
+	}
 }
+func TestGetHashNonIntegerID(t *testing.T) {
+	app := NewHashServer(2*time.Second, context.Background())
+
+	req, err := http.NewRequest("GET", "/hash/bad", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(app.GetHash)
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("Was expecting http.StatusBadRequest, received: %v", rr.Code)
+	}
+}
+func TestGetHashTooEarly(t *testing.T) {
+	app := NewHashServer(2*time.Second, context.Background())
+	app.hashCount = 10
+
+	h1 := postToHash(app, "password=secret!", t)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("/hash/%d", h1), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(app.GetHash)
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Was expecting http.StatusNotFound, received: %v", rr.Code)
+	}
+}
+
 func TestGetHashSuccess(t *testing.T) {
-	hs := NewHashServer(1 * time.Second)
+	hs := NewHashServer(1*time.Second, context.Background())
 	hs.hashCount = 10
 
 	// send the post request:
 	postToHash(hs, "password=secret!", t)
 
-	// sleep for 1 second (might want to )
+	// sleep for a little over 1 second
 	time.Sleep(1050 * time.Millisecond)
 
 	req, err := http.NewRequest("GET", "/hash/11", nil)
@@ -189,41 +222,17 @@ func TestGetHashSuccess(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Errorf("Was expecting http.StatusOK, received: %v", rr.Code)
 	}
+
 	hasher := sha512.New()
 	expected := base64.URLEncoding.EncodeToString(hasher.Sum([]byte("secret!")))
 	if expected != rr.Body.String() {
 		t.Error("Hashes do not match!")
 	}
-
 }
 
-func TestPostHashAfterShutdown(t *testing.T) {
+func getHash(hs *HashServer, id int, t *testing.T) string {
 
-	app := NewHashServer(2 * time.Second)
-	app.Shutdown()
-
-	req, err := http.NewRequest("POST", "/hash", strings.NewReader("password=boogabooga"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(app.Hash)
-
-	handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusGone {
-		t.Errorf("Was expecting http.StatusGone, received: %v", rr.Code)
-	}
-}
-
-func TestGetHashAfterShutdown(t *testing.T) {
-
-	hs := NewHashServer(1 * time.Second)
-	postToHash(hs, "password=superSecret1", t)
-	hs.Shutdown()
-
-	req, err := http.NewRequest("GET", "/hash/1", nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("/hash/%d", id), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,45 +242,37 @@ func TestGetHashAfterShutdown(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusGone {
-		t.Errorf("Was expecting http.StatusGone, received: %v", rr.Code)
+	if rr.Code == http.StatusOK {
+		return rr.Body.String()
 	}
+
+	return ""
 }
 
-func TestShutdownInterruptPendingJobs(t *testing.T) {
+func TestCancelInterruptPendingJobs(t *testing.T) {
 
-	hs := NewHashServer(5 * time.Second)
-	postToHash(hs, "password=superSecret1", t)
-	postToHash(hs, "password=superSecret2", t)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	// set up a 5 second timer:
-	// we should be done almost immediately..
-	done := make(chan bool)
-	timeout := make(chan bool)
+	hs := NewHashServer(100*time.Microsecond, ctx)
+	h1 := postToHash(hs, "password=superSecret1", t)
+	h2 := postToHash(hs, "password=superSecret2", t)
 
-	go func() {
-		time.Sleep(hs.delay)
-		timeout <- true
-	}()
+	cancel()
 
-	go func() {
-		hs.Shutdown()
-		done <- true
-	}()
+	time.Sleep(hs.delay * 2)
 
-	select {
-	case <-timeout:
-		t.Error("unexpected timeout")
-	case <-done:
+	if hash1 := getHash(hs, h1, t); hash1 != "" {
+		t.Errorf("was expecting an empty string: received[%v]", hash1)
 	}
 
-	//check to see if elapsed time is less than delay?
-
+	if hash2 := getHash(hs, h2, t); hash2 != "" {
+		t.Errorf("was expecting an empty string: received[%v]", hash2)
+	}
 }
 
 func TestGetStats(t *testing.T) {
 
-	app := NewHashServer(5 * time.Second)
+	app := NewHashServer(5*time.Second, context.Background())
 	postToHash(app, "password=superSecret1", t)
 	postToHash(app, "password=superSecret2", t)
 	postToHash(app, "password=superSecret3", t)

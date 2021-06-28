@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
@@ -8,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -16,20 +16,20 @@ import (
 )
 
 type HashServer struct {
-	doneCh    chan bool
 	hashCount int32
 	hashes    map[int]string
 	delay     time.Duration
-	wg        sync.WaitGroup
-	ts        utils.TimeStats
+	//wg        sync.WaitGroup
+	ts  utils.TimeStats
+	ctx context.Context
 }
 
-func NewHashServer(delay time.Duration) *HashServer {
+func NewHashServer(delay time.Duration, ctx context.Context) *HashServer {
 
 	app := &HashServer{
 		delay:  delay,
 		hashes: make(map[int]string),
-		doneCh: make(chan bool),
+		ctx:    ctx,
 	}
 	return app
 }
@@ -39,12 +39,6 @@ func (hs *HashServer) Hash(w http.ResponseWriter, req *http.Request) {
 	// validate that this is a post:
 	if req.Method != "POST" {
 		http.Error(w, "Only POST supported.", http.StatusBadRequest)
-		return
-	}
-
-	if hs.isShuttingDown() {
-		w.WriteHeader(http.StatusGone)
-		fmt.Fprint(w, "Shutting down.") //@todo use an error code?
 		return
 	}
 
@@ -70,16 +64,12 @@ func (hs *HashServer) Hash(w http.ResponseWriter, req *http.Request) {
 	// Two things happen next:
 	// 1. The ID of the pending hash is returned to the caller
 	// 2. A goroutine is used to concurrently execute a function to wait the specified delay then
-	//  generate the new hash and store it in the map. If the doneCh is closed during this wait (via Shutdown),
+	//  generate the new hash and store it in the map. If the context is cancelled during this wait,
 	//  the goroutine will exit immediately and return without generating the hash
 
-	// increment the wait group (this is used by shutdown)
-	hs.wg.Add(1)
-
 	go func(i int, pw string) {
-		defer hs.wg.Done()
 
-		// sleep in a separate goroutine so that we can also monitor the status of the done channel
+		// sleep in a separate goroutine so that we can also monitor the status of the context
 		// (see select below)
 		timeout := make(chan bool)
 		go func() {
@@ -88,7 +78,7 @@ func (hs *HashServer) Hash(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		select {
-		case <-hs.doneCh:
+		case <-hs.ctx.Done():
 			return
 		case <-timeout:
 		}
@@ -108,14 +98,12 @@ func (hs *HashServer) GetHash(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if hs.isShuttingDown() {
-		w.WriteHeader(http.StatusGone)
-		fmt.Fprint(w, "Shutting down.")
-		return
-	}
-
 	// extract the POST request id -- must be a number
 	id := strings.TrimPrefix(req.URL.Path, "/hash/")
+	if len(id) == 0 {
+		http.Error(w, "Must provide valid id", http.StatusBadRequest)
+	}
+
 	i, err := strconv.Atoi(id)
 	if err != nil {
 		http.Error(w, "Must be a number", http.StatusBadRequest)
@@ -147,30 +135,4 @@ func (hs *HashServer) Stats(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(json)
-}
-
-func (hs *HashServer) Shutdown() {
-
-	// check if already been called:
-	if hs.isShuttingDown() {
-		return
-	}
-
-	// close the done channel
-	// will cause any active hash requests to exit
-	// prevents new calls to /hash, /hash/ from being processed
-	close(hs.doneCh)
-
-	// wait for any pending hash requests to exit
-	hs.wg.Wait()
-}
-
-// determine if Shutdown as been called: the done channel will return ok=false if so.
-func (a *HashServer) isShuttingDown() bool {
-	ok := true
-	select {
-	case _, ok = <-a.doneCh:
-	default:
-	}
-	return !ok
 }
