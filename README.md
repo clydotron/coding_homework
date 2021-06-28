@@ -22,7 +22,9 @@ Server can be shutdown either by hitting ctrl-c in the terminal window, or sendi
 ## Requests:
 #### hash
   `POST /hash` 
+  
   `curl --data "password=secret" http://localhost:8080/hash`
+  
   
   Code | Message | Description
   StatusOK|Hash ID|ID of the new hash.
