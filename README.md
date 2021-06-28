@@ -46,11 +46,22 @@ Server can be shutdown either by via ctrl-c from inside the terminal window, or 
  #### stats
   `curl http://localhost:8080/stats`
   
+  
+    Code | Text | Message | Description
+  --- | --- | --- | ---
+  200|StatusOK|json object|json containing 2 fields
+  500|StatusInternalServerError|Failed to JSON encode time statistics|Something went wrong while encoding the JSON
+  
   returns json object with two fields:
   * total: total number of calls to POST /hash
   * average: average time, in microseconds, or each call
   
  #### shutdown
   `curl http://localhost:8080/shutdown`
+  
+      Code | Text | Message | Description
+  --- | --- | --- | ---
+  200|StatusOK|Shutting down.|Server is shutting down.
+  
   
   Gracefully shutdown the server
