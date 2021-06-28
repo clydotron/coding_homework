@@ -17,7 +17,7 @@ type TimeStatsReport struct {
 	Average int64 `json:"average"`
 }
 
-// add a value.
+// add a value
 func (s *TimeStats) Add(value time.Duration) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
@@ -29,11 +29,6 @@ func (s *TimeStats) Add(value time.Duration) {
 // record the elapsed time since the supplied start time
 func (s *TimeStats) Record(startTime time.Time) {
 	s.Add(time.Since(startTime))
-	// s.mx.Lock()
-	// defer s.mx.Unlock()
-
-	// s.n++
-	// s.t += time.Since(startTime)
 }
 
 func (s *TimeStats) GetReport() TimeStatsReport {
@@ -48,7 +43,5 @@ func (s *TimeStats) GetReport() TimeStatsReport {
 }
 
 func (s *TimeStats) GetReportJSON() ([]byte, error) {
-
-	//r := s.GetReport()
 	return json.Marshal(s.GetReport())
 }
