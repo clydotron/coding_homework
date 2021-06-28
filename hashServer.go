@@ -54,6 +54,7 @@ func (hs *HashServer) Hash(w http.ResponseWriter, req *http.Request) {
 	password := req.FormValue("password")
 	if len(password) == 0 {
 		http.Error(w, "required key password missing", http.StatusBadRequest)
+		return
 	}
 
 	// increment the hash count, and return the new value
@@ -101,6 +102,7 @@ func (hs *HashServer) GetHash(w http.ResponseWriter, req *http.Request) {
 	id := strings.TrimPrefix(req.URL.Path, "/hash/")
 	if len(id) == 0 {
 		http.Error(w, "Must provide valid id", http.StatusBadRequest)
+		return
 	}
 
 	i, err := strconv.Atoi(id)
