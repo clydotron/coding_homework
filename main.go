@@ -77,6 +77,7 @@ func main() {
 	// wait until someone calls the cancel function for the context
 	<-ctx.Done()
 
+	// shutdown the server
 	ctxShutDown, cancelFcn := context.WithTimeout(context.Background(), 5*time.Second)
 	defer func() {
 		cancelFcn()

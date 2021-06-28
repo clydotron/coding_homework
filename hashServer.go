@@ -19,9 +19,8 @@ type HashServer struct {
 	hashCount int32
 	hashes    map[int]string
 	delay     time.Duration
-	//wg        sync.WaitGroup
-	ts  utils.TimeStats
-	ctx context.Context
+	ts        utils.TimeStats
+	ctx       context.Context
 }
 
 func NewHashServer(delay time.Duration, ctx context.Context) *HashServer {
@@ -54,7 +53,7 @@ func (hs *HashServer) Hash(w http.ResponseWriter, req *http.Request) {
 	// get the value for the key 'password' - make sure it has a valid vale
 	password := req.FormValue("password")
 	if len(password) == 0 {
-		http.Error(w, "required key password missing", http.StatusPreconditionFailed)
+		http.Error(w, "required key password missing", http.StatusBadRequest)
 	}
 
 	// increment the hash count, and return the new value
@@ -106,7 +105,7 @@ func (hs *HashServer) GetHash(w http.ResponseWriter, req *http.Request) {
 
 	i, err := strconv.Atoi(id)
 	if err != nil {
-		http.Error(w, "Must be a number", http.StatusBadRequest)
+		http.Error(w, "ID must be a number", http.StatusBadRequest)
 		return
 	}
 

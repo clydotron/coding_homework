@@ -58,7 +58,7 @@ func TestHashNoParameters(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusInternalServerError {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			rr.Code, http.StatusPreconditionFailed)
+			rr.Code, http.StatusInternalServerError)
 	}
 }
 
@@ -76,9 +76,9 @@ func TestHashNoPassword(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusPreconditionFailed {
+	if status := rr.Code; status != http.StatusBadRequest {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			rr.Code, http.StatusPreconditionFailed)
+			rr.Code, http.StatusBadRequest)
 	}
 }
 
@@ -161,6 +161,7 @@ func TestGetHashNoID(t *testing.T) {
 		t.Errorf("Was expecting http.StatusBadRequest, received: %v", rr.Code)
 	}
 }
+
 func TestGetHashNonIntegerID(t *testing.T) {
 	app := NewHashServer(2*time.Second, context.Background())
 
@@ -178,6 +179,7 @@ func TestGetHashNonIntegerID(t *testing.T) {
 		t.Errorf("Was expecting http.StatusBadRequest, received: %v", rr.Code)
 	}
 }
+
 func TestGetHashTooEarly(t *testing.T) {
 	app := NewHashServer(2*time.Second, context.Background())
 	app.hashCount = 10
@@ -242,10 +244,12 @@ func getHash(hs *HashServer, id int, t *testing.T) string {
 
 	handler.ServeHTTP(rr, req)
 
+	//fmt.Println(id, "result", rr.Code, rr.Body.String())
 	if rr.Code == http.StatusOK {
 		return rr.Body.String()
 	}
 
+	//fmt.Println(id, "result", rr.Body)
 	return ""
 }
 
@@ -259,7 +263,7 @@ func TestCancelInterruptPendingJobs(t *testing.T) {
 
 	cancel()
 
-	time.Sleep(hs.delay * 2)
+	time.Sleep(hs.delay * 4)
 
 	if hash1 := getHash(hs, h1, t); hash1 != "" {
 		t.Errorf("was expecting an empty string: received[%v]", hash1)
@@ -276,7 +280,7 @@ func TestCancelAfterSuccesfulHash(t *testing.T) {
 	hs := NewHashServer(100*time.Microsecond, ctx)
 	h1 := postToHash(hs, "password=superSecret1", t)
 
-	time.Sleep(hs.delay * 2)
+	time.Sleep(hs.delay * 4)
 
 	if hash1 := getHash(hs, h1, t); hash1 == "" {
 		t.Error("was expecting a non-empty string: received none.")
@@ -286,7 +290,7 @@ func TestCancelAfterSuccesfulHash(t *testing.T) {
 
 	cancel()
 
-	time.Sleep(hs.delay * 2)
+	time.Sleep(hs.delay * 4)
 
 	if hash2 := getHash(hs, h2, t); hash2 != "" {
 		t.Errorf("was expecting an empty string: received[%v]", hash2)
