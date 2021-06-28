@@ -83,7 +83,7 @@ func TestHashNoPassword(t *testing.T) {
 func TestHashPostRequest(t *testing.T) {
 
 	app := NewHashServer(2 * time.Second)
-	app.count = 10
+	app.hashCount = 10
 
 	req, err := http.NewRequest("POST", "/hash", strings.NewReader("password=boogabooga"))
 	if err != nil {
@@ -111,7 +111,7 @@ func TestHashPostRequest(t *testing.T) {
 
 }
 
-// helper functions
+// helper function
 func postToHash(app *HashServer, payload string, t *testing.T) int {
 
 	req, err := http.NewRequest("POST", "/hash", strings.NewReader(payload))
@@ -143,7 +143,7 @@ func postToHash(app *HashServer, payload string, t *testing.T) int {
 */
 func TestGetHashTooEarly(t *testing.T) {
 	app := NewHashServer(2 * time.Second)
-	app.count = 10
+	app.hashCount = 10
 
 	postToHash(app, "password=secret!", t)
 
@@ -168,7 +168,7 @@ func TestGetHashTooEarly(t *testing.T) {
 }
 func TestGetHashSuccess(t *testing.T) {
 	hs := NewHashServer(1 * time.Second)
-	hs.count = 10
+	hs.hashCount = 10
 
 	// send the post request:
 	postToHash(hs, "password=secret!", t)
@@ -239,7 +239,6 @@ func TestGetHashAfterShutdown(t *testing.T) {
 }
 
 func TestShutdownInterruptPendingJobs(t *testing.T) {
-	//how do i actually test this?
 
 	hs := NewHashServer(5 * time.Second)
 	postToHash(hs, "password=superSecret1", t)
@@ -265,6 +264,8 @@ func TestShutdownInterruptPendingJobs(t *testing.T) {
 		t.Error("unexpected timeout")
 	case <-done:
 	}
+
+	//check to see if elapsed time is less than delay?
 
 }
 

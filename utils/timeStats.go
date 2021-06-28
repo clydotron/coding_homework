@@ -17,7 +17,7 @@ type TimeStatsReport struct {
 	Average int64 `json:"average"`
 }
 
-// add a value
+// add a value to the total, increment the counter (n)
 func (s *TimeStats) Add(value time.Duration) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
