@@ -28,7 +28,7 @@ Server can be shutdown either by hitting ctrl-c in the terminal window, or sendi
   --- | --- | --- | ---
   200|StatusOK|Hash ID|ID of the new hash: the nth request will return n.
   400|StatusBadRequest|Only POST accepted.|Non POST request received.
-  |||required key password missing|Required value 'password' not present.
+  400|StatusBadRequest|required key password missing|Required value 'password' not present.
   500|StatusInternalServerError|ParseForm failed|Unable to parse the form data: bad format or empty.
   
  #### hash/id  
@@ -39,8 +39,8 @@ Server can be shutdown either by hitting ctrl-c in the terminal window, or sendi
   --- | --- | --- | ---
   200|StatusOK|Hash|Base64 encoded Sha512 hash of user supplied 'password'
   400|StatusBadRequest|Only GET accepted.|Non GET request received.
-   |||Must provide valid id|id missing or invalid.
-   |||ID must be a number|id not a number
+  400|StatusBadRequest|Must provide valid id|id missing or invalid.
+  400|StatusBadRequest|ID must be a number|id not a number
    404|StatusNotFound|Not found|Hashed value not found
   
  #### stats
