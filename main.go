@@ -28,7 +28,7 @@ func main() {
 
 	// allow the user to specify the port and delay duration
 	port := flag.Int("port", 8080, "port to listen on")
-	delay := flag.Int("delay", 15, "delay (in seconds) for hash")
+	delay := flag.Int("delay", 5, "delay (in seconds) for hash")
 	flag.Parse()
 
 	// create a context with cancel - cancel will be called from two places:

@@ -269,7 +269,29 @@ func TestCancelInterruptPendingJobs(t *testing.T) {
 		t.Errorf("was expecting an empty string: received[%v]", hash2)
 	}
 }
+func TestCancelAfterSuccesfulHash(t *testing.T) {
 
+	ctx, cancel := context.WithCancel(context.Background())
+
+	hs := NewHashServer(100*time.Microsecond, ctx)
+	h1 := postToHash(hs, "password=superSecret1", t)
+
+	time.Sleep(hs.delay * 2)
+
+	if hash1 := getHash(hs, h1, t); hash1 == "" {
+		t.Error("was expecting a non-empty string: received none.")
+	}
+
+	h2 := postToHash(hs, "password=superSecret2", t)
+
+	cancel()
+
+	time.Sleep(hs.delay * 2)
+
+	if hash2 := getHash(hs, h2, t); hash2 != "" {
+		t.Errorf("was expecting an empty string: received[%v]", hash2)
+	}
+}
 func TestGetStats(t *testing.T) {
 
 	app := NewHashServer(5*time.Second, context.Background())
