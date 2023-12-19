@@ -1,5 +1,5 @@
-# jumpcloud
-JumpCloud homework assignment: Simple HTTP server for generating base64 encoded Sha512 hashes. Includes statistics and shutdown functionality. Written in Go.
+# Coding Homework
+Coding homework assignment: Simple HTTP server for generating base64 encoded Sha512 hashes. Includes statistics and shutdown functionality. Written in Go.
 
 ## Usage
 Make local copy of the repo, open a terminal, cd into the root folder (jumpcloud)
